@@ -1,0 +1,35 @@
+{
+    "data" : {
+        "tr_data_path": "./dataset/training/tr_data.json",
+        "tr_labels_path": "./dataset/training/tr_labels.json",
+        "va_data_path": "./dataset/validation/va_data.json",
+        "va_labels_path": "./dataset/validation/va_labels.json",
+        "te_data_path": "./dataset/test/te_data.json",
+        "te_labels_path": "./dataset/test/te_labels.json",
+        "output_path": "./out",
+        "plots_path": "./plots/plot10.png"
+    },
+    "hyper_params": {
+        "batch_size": 50,
+        "learning_rate": 0.008,
+        "epochs": 8
+    },
+    "network_params": {
+        "embedding_dim": 400,
+        "hidden_size": 256,
+        "num_layers": 2
+    },
+    "train_params": {
+        "validation_step": 1,
+        "step_monitor": 15,
+        "accuracy_target": 1.00,
+        "use_best_model": false,
+        "use_last_model": false
+    },
+    "early_stop_params": {
+        "epochs_check": 1,
+        "start_check": 4,
+        "improve_rate": 5,
+        "va_loss_target": 3
+    }
+}

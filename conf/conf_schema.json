@@ -1,0 +1,103 @@
+{
+    "type": "object",
+    "required": [
+        "data",
+        "hyper_params",
+        "network_params",
+        "train_params",
+        "early_stop_params"
+    ],
+    "properties": {
+        "data": {
+            "type": "object",
+            "required": [
+                "tr_data_path",
+                "tr_labels_path",
+                "va_data_path",
+                "va_labels_path",
+                "te_data_path",
+                "te_labels_path",
+                "output_path",
+                "plots_path"
+            ],
+            "properties": {
+                "tr_data_path": {"type": "string"},
+                "tr_labels_path": {"type": "string"},
+                "va_data_path": {"type": "string"},
+                "va_labels_path": {"type": "string"},
+                "te_data_path": {"type": "string"},
+                "te_labels_path": {"type": "string"},
+                "output_path": {"type": "string"},
+                "plots_path": {"type": "string"}
+            }
+        },
+        "hyper_params": {
+            "type": "object",
+            "required": [
+                "batch_size",
+                "learning_rate",
+                "epochs"
+            ],
+            "properties": {
+                "batch_size": {"type": "number"},
+                "learning_rate": {"type": "number"},
+                "epochs": {"type": "number"}
+            }
+        },
+        "network_params": {
+            "type": "object",
+            "required": [
+                "embedding_dim",
+                "hidden_size",
+                "num_layers"
+            ],
+            "properties": {
+                "embedding_dim": {"type": "number"},
+                "hidden_size": {"type": "number"},
+                "num_layers": {"type": "number"}
+            }
+        },
+        "train_params": {
+            "type": "object",
+            "required": [
+                "validation_step",
+                "step_monitor",
+                "accuracy_target",
+                "use_best_model",
+                "use_last_model"
+            ],
+            "properties": {
+                "validation_step": {"type": "number"},
+                "step_monitor": {"type": "number"},
+                "accuracy_target": {"type": "number"},
+                "use_best_model": {"type": "boolean"},
+                "use_last_model": {"type": "boolean"}
+            },
+            "allOf": [
+                {
+                    "if": {"properties": {"use_best_model": {"const": true}}},
+                    "then": {"properties": {"use_last_model": {"const": false}}}
+                },
+                {
+                    "if": {"properties": {"use_last_model": {"const": true}}},
+                    "then": {"properties": {"use_best_model": {"const": false}}}
+                }
+            ]
+        },
+        "early_stop_params": {
+            "type": "object",
+            "required": [
+                "epochs_check",
+                "start_check",
+                "improve_rate",
+                "va_loss_target"
+            ],
+            "properties": {
+                "epochs_check": {"type": "number"},
+                "start_check": {"type": "number"},
+                "improve_rate": {"type": "number"},
+                "va_loss_target": {"type": "number"}
+            }
+        }
+    }
+}
