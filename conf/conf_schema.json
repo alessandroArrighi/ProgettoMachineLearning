@@ -18,7 +18,7 @@
                 "te_data_path",
                 "te_labels_path",
                 "output_path",
-                "plots_path"
+                "tensorboard_path"
             ],
             "properties": {
                 "tr_data_path": {"type": "string"},
@@ -28,7 +28,7 @@
                 "te_data_path": {"type": "string"},
                 "te_labels_path": {"type": "string"},
                 "output_path": {"type": "string"},
-                "plots_path": {"type": "string"}
+                "tensorboard_path": {"type": "string"}
             }
         },
         "hyper_params": {

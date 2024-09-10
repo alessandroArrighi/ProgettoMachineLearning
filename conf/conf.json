@@ -7,7 +7,7 @@
         "te_data_path": "./dataset/test/te_data.json",
         "te_labels_path": "./dataset/test/te_labels.json",
         "output_path": "./out",
-        "plots_path": "./plots/plot10.png"
+        "tensorboard_path": "./runs"
     },
     "hyper_params": {
         "batch_size": 50,

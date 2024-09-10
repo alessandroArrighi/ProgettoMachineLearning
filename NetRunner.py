@@ -7,11 +7,14 @@ from DatasetHendler import DatasetHendler
 from pathlib import Path
 import sys
 import matplotlib.pyplot as plt
+import seaborn as sn
+from datetime import datetime
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 class NetRunner():
     
@@ -39,6 +42,17 @@ class NetRunner():
         
         if self.conf.train_params.use_best_model:
             self.__load_model(self.best_model_outpath_sd)
+        
+        
+        tensorboard_root = Path(self.conf.data.tensorboard_path)
+        if not tensorboard_root.is_dir():
+            tensorboard_root.mkdir()
+
+        tensorboard_path = datetime.now().strftime("project_%Y-%m-%d_%H:%M:%S")
+        tensorboard_path = Path(tensorboard_root / tensorboard_path)
+        tensorboard_path.mkdir()
+
+        self.writer = SummaryWriter(tensorboard_path)
 
         # Verifica della GPU
         self.train_on_gpu = torch.cuda.is_available()
@@ -69,11 +83,6 @@ class NetRunner():
         validation_step = self.conf.train_params.validation_step
         train_step_monitor = self.conf.train_params.step_monitor
         accuracy_target = self.conf.train_params.accuracy_target
-
-        # Valori delle loss
-        tr_losses_x, tr_losses_y = [], []
-        tr_run_losses_x, tr_run_losses_y = [], []
-        va_losses_x, va_losses_y = [], []
 
         # Parametri dell'early stop
         epochs_check = self.conf.early_stop_params.epochs_check
@@ -122,6 +131,9 @@ class NetRunner():
                 if self.train_on_gpu:
                     inputs, labels = inputs.cuda(), labels.cuda()
 
+                if epoch == 0:
+                    self.writer.add_graph(net, inputs)
+
                 net.zero_grad()
 
                 # Chimata della forward
@@ -139,13 +151,10 @@ class NetRunner():
 
                 # Passati ogni step_monitor cicli
                 if (i + 1) % train_step_monitor == 0:
-                    tr_run_losses_y.append(running_loss / train_step_monitor)
-                    tr_run_losses_x.append(global_step)
                     print(f'global_step: {global_step:5d} - [ep: {epoch + 1:3d}, step: {i + 1:5d}] loss: {loss.item():.6f} - running_loss: {(running_loss / train_step_monitor):.6f}')
                     running_loss = 0.0
-                
-                tr_losses_y.append(loss.item())
-                tr_losses_x.append(global_step)
+
+                    self.writer.add_scalar('train/loss', loss.item(), epoch)
 
                 global_step += 1
             
@@ -176,8 +185,7 @@ class NetRunner():
 
                 # Calcolo della loss
                 total_va_loss = va_loss / va_loss_counter
-                va_losses_x.append(global_step)
-                va_losses_y.append(total_va_loss)
+                self.writer.add_scalar('valid/loss', total_va_loss, epoch)
 
                 # Controlli sull'andamento della loss per eseguire l'ealry stop se necessario
                 if va_loss < best_va_loss:
@@ -195,8 +203,8 @@ class NetRunner():
             if (epoch + 1) % validation_step == 0 or (epoch + 1) == epochs:
                 
                 # Esecuzione dei test con il set di training e validazione
-                tr_acc = self.test(self.tr_loader)
-                va_acc = self.test(self.va_loader)
+                tr_acc, tr_mat = self.test(self.tr_loader)
+                va_acc, va_mat = self.test(self.va_loader)
 
                 tr_improved = False
                 va_improved = False
@@ -214,6 +222,15 @@ class NetRunner():
                     best_va_acc = va_acc
                     va_improved = True
 
+                self.writer.add_scalar('train/acc', tr_acc, epoch)
+                self.writer.add_scalar('valid/acc', va_acc, epoch)
+                tr_mat = sn.heatmap(tr_mat, annot=True, fmt = '.2f').get_figure()
+                plt.close()
+                va_mat = sn.heatmap(va_mat, annot=True, fmt = '.2f').get_figure()
+                plt.close()
+                self.writer.add_figure('train/confusion_matrix', tr_mat, epoch)
+                self.writer.add_figure('valid/confusion_matrix', va_mat, epoch)
+
                 if tr_improved and va_improved:
                     torch.save(net.state_dict(), self.best_model_outpath_sd)
                     torch.save(net, self.best_model_outpath)                
@@ -229,24 +246,13 @@ class NetRunner():
         
         torch.save(net.state_dict(), self.last_model_outpath_sd)
         torch.save(net, self.last_model_outpath)
-
-        _, (ax1, ax2) = plt.subplots(2, 1)
         
-        ax1.plot(tr_losses_x, tr_losses_y, label='train_loss')
-        ax1.plot(tr_run_losses_x, tr_run_losses_y, label='train_running_loss')
-        ax1.set_title('Training loss')
-        ax1.legend()
+        self.writer.add_hparams(
+            {'num_epochs' : epochs, 'learning_rate': self.conf.hyper_params.learning_rate}, 
+            {'hparams/best_loss' : loss.item()})
         
-        ax2.plot(va_losses_x, va_losses_y, label='validation_loss')
-        ax2.set_title('Validation loss')
-        ax2.legend()
-
-        plt.tight_layout()
-
-        try:
-            plt.savefig(self.conf.data.plots_path)
-        except Exception:
-            print("ERROR --- Cartella non esistente")
+        self.writer.flush()
+        self.writer.close()
     
     def test(self, dataLoader: DataLoader = None):
 
@@ -293,7 +299,7 @@ class NetRunner():
             print(f'Test accuracy: {mt.accuracy():.2f}%')
             print(mt.cofusion_matrix)
         
-        return mt.accuracy()
+        return mt.accuracy(), mt.calc_confusion_matrix()
 
     
     def __load_data(self) -> None:
